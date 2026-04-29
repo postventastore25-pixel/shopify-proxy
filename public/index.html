@@ -1,1 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Recuperador WhatsApp — Keysa Store</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.top{background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:15px;font-weight:600;color:#1a1a1a}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:99px}
+.pill.ok{background:#e6f4ea;color:#1e7e34}
+.pill.ko{background:#fce8e6;color:#c5221f}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.wrap{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:18px}
+.card-title{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.order-item{border:1px solid #e5e5e5;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.order-item:hover{border-color:#aaa}
+.order-item.sel{border-color:#0070f3;background:#f0f7ff}
+.order-name{font-size:14px;font-weight:500}
+.order-meta{font-size:12px;color:#666;margin-top:3px}
+.order-row{display:flex;justify-content:space-between;align-items:flex-start}
+.order-total{font-size:13px;font-weight:500;color:#1a7f37}
+.badge{font-size:11px;padding:2px 7px;border-radius:99px;background:#fff3cd;color:#856404;font-weight:500}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #ddd;background:#fff;color:#1a1a1a;transition:all .15s;width:100%}
+.btn:hover{background:#f5f5f5}
+.btn-primary{background:#0070f3;color:#fff;border-color:#0070f3}
+.btn-primary:hover{background:#005cc5}
+.btn-wa{background:#25d366;color:#fff;border-color:#25d366}
+.btn-wa:hover{background:#1da851}
+.tones{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tone{padding:4px 12px;font-size:12px;border-radius:99px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#666;transition:all .15s}
+.tone.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.msg-area{background:#f5f5f5;border:1px solid #e5e5e5;border-radius:8px;padding:12px;font-size:13px;line-height:1.7;min-height:120px;white-space:pre-wrap;word-break:break-word;outline:none;margin-bottom:10px}
+.action-row{display:flex;gap:8px}
+.action-row .btn{flex:1}
+select{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:12px;background:#fff}
+.empty{text-align:center;padding:2rem;color:#888;font-size:13px}
+.spinner{width:13px;height:13px;border:2px solid #ddd;border-top-color:#666;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status{font-size:12px;margin-top:6px}
+.status.ok{color:#1a7f37}
+.status.err{color:#c5221f}
+.connect-btn{background:#1a1a1a;color:#fff;border-color:#1a1a1a;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none}
+.connect-btn:hover{background:#333}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="logo">Recuperador WhatsApp</div>
+  <div id="status-pill" class="pill ko"><span class="dot"></span>No conectado</div>
+</div>
+
+<div class="wrap">
+
+  <div class="card" id="orders-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin:0">Pedidos en borrador</div>
+      <button class="btn" style="width:auto;padding:5px 12px;font-size:12px" onclick="loadOrders()">Actualizar</button>
+    </div>
+    <select id="status-sel" onchange="loadOrders()">
+      <option value="open">Abiertos</option>
+      <option value="invoice_sent">Factura enviada</option>
+      <option value="completed">Completados</option>
+    </select>
+    <div id="orders-list"><div class="empty">Conecta tu tienda para ver los pedidos</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Mensaje WhatsApp</div>
+    <div class="tones">
+      <div class="tone active" onclick="setTone('urgente',this)">Urgente</div>
+      <div class="tone" onclick="setTone('amigable',this)">Amigable</div>
+      <div class="tone" onclick="setTone('formal',this)">Formal</div>
+      <div class="tone" onclick="setTone('corto',this)">Corto</div>
+    </div>
+    <button class="btn btn-primary" onclick="generateMsg()" id="gen-btn">
+      <span id="gen-spin" class="spinner" style="display:none"></span>
+      Generar mensaje con IA
+    </button>
+    <div id="gen-status" class="status"></div>
+    <div id="msg-section" style="display:none;margin-top:14px">
+      <div class="msg-area" id="msg-out" contenteditable="true"></div>
+      <div class="action-row">
+        <button class="btn" onclick="copyMsg()">Copiar</button>
+        <button class="btn btn-wa" onclick="openWA()">WhatsApp</button>
+      </div>
+      <div id="copy-status" class="status"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let selected = null;
+let tone = 'urgente';
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const pill = document.getElementById('status-pill');
+    if (d.connected) {
+      pill.className = 'pill ok';
+      pill.innerHTML = '<span class="dot"></span>' + d.shop;
+      loadOrders();
+    } else {
+      pill.className = 'pill ko';
+      pill.innerHTML = '<span class="dot"></span>No conectado — <a href="/auth" style="color:inherit;margin-left:4px">Conectar</a>';
+    }
+  } catch(e) {}
+}
+
+async function loadOrders() {
+  const list = document.getElementById('orders-list');
+  const status = document.getElementById('status-sel').value;
+  list.innerHTML = '<div class="empty"><span class="spinner" style="display:inline-block;margin-right:6px"></span>Cargando...</div>';
+  try {
+    const r = await fetch('/api/draft_orders?status=' + status);
+    if (r.status === 401) {
+      list.innerHTML = '<div class="empty">Debes <a href="/auth">conectar tu tienda</a> primero</div>';
+      return;
+    }
+    const d = await r.json();
+    const orders = (d.draft_orders || []).map(o => ({
+      id: o.id,
+      name: o.name,
+      customer: ((o.customer?.first_name||o.billing_address?.first_name||'')+ ' ' +(o.customer?.last_name||o.billing_address?.last_name||'')).trim() || 'Sin nombre',
+      phone: o.customer?.phone || o.billing_address?.phone || o.shipping_address?.phone || '',
+      product: o.line_items?.[0]?.title || 'Producto',
+      qty: o.line_items?.[0]?.quantity || 1,
+      total: '$' + Number(o.total_price).toLocaleString('es-CL'),
+      city: o.shipping_address?.city || ''
+    }));
+    if (!orders.length) { list.innerHTML = '<div class="empty">No hay pedidos con este estado</div>'; return; }
+    list.innerHTML = '';
+    orders.forEach(o => {
+      const d = document.createElement('div');
+      d.className = 'order-item' + (selected?.id === o.id ? ' sel' : '');
+      d.innerHTML = `<div class="order-row"><span class="order-name">${o.customer}</span><span class="order-total">${o.total}</span></div>
+        <div class="order-meta">${o.product}${o.qty>1?' x'+o.qty:''}</div>
+        <div class="order-row" style="margin-top:4px"><span style="font-size:12px;color:#0070f3">${o.phone||'Sin teléfono'}</span><span class="badge">${o.name}</span></div>`;
+      d.onclick = () => { selected = o; loadOrders(); };
+      list.appendChild(d);
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="empty">Error cargando pedidos</div>';
+  }
+}
+
+function setTone(t, el) {
+  tone = t;
+  document.querySelectorAll('.tone').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+}
+
+async function generateMsg() {
+  if (!selected) { document.getElementById('gen-status').textContent = 'Selecciona un pedido primero'; document.getElementById('gen-status').className = 'status err'; return; }
+  document.getElementById('gen-spin').style.display = 'inline-block';
+  document.getElementById('gen-status').textContent = 'Generando...';
+  document.getElementById('msg-section').style.display = 'none';
+  const toneMap = { urgente:'urgente con stock limitado', amigable:'amigable y cercano', formal:'formal y profesional', corto:'muy corto, máximo 3 líneas' };
+  const prompt = `Eres experto en recuperación de carritos para e-commerce chileno. Genera un mensaje WhatsApp ${toneMap[tone]} en español chileno con emojis.
+Cliente: ${selected.customer}, Producto: ${selected.product}${selected.qty>1?' x'+selected.qty:''}, Total: ${selected.total}, Ciudad: ${selected.city||'Chile'}, Envío: GRATIS, Pago: contra reembolso.
+Solo el mensaje, nada más.`;
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:300, messages:[{role:'user',content:prompt}] })
+    });
+    const data = await r.json();
+    document.getElementById('msg-out').textContent = data.content?.[0]?.text || '';
+    document.getElementById('msg-section').style.display = 'block';
+    document.getElementById('gen-status').textContent = '';
+  } catch(e) {
+    document.getElementById('gen-status').textContent = 'Error generando mensaje';
+    document.getElementById('gen-status').className = 'status err';
+  }
+  document.getElementById('gen-spin').style.display = 'none';
+}
+
+function copyMsg() {
+  navigator.clipboard.writeText(document.getElementById('msg-out').textContent).then(() => {
+    document.getElementById('copy-status').textContent = '✓ Copiado';
+    document.getElementById('copy-status').className = 'status ok';
+    setTimeout(() => document.getElementById('copy-status').textContent = '', 2000);
+  });
+}
+
+function openWA() {
+  const phone = (selected?.phone||'').replace(/\D/g,'');
+  if (!phone) { alert('Este pedido no tiene teléfono'); return; }
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(document.getElementById('msg-out').textContent),'_blank');
+}
+
+checkStatus();
+</script>
+</body>
+</html>
 
