@@ -1,1 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Recuperador WhatsApp</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.top{background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:15px;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:99px}
+.pill.ok{background:#e6f4ea;color:#1e7e34}.pill.ko{background:#fce8e6;color:#c5221f}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:18px;margin-bottom:16px}
+.card-title{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field label{font-size:12px;color:#666}
+input[type=text],input[type=password]{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #ddd;background:#fff;color:#1a1a1a;transition:all .15s;width:100%}
+.btn:hover{background:#f5f5f5}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-primary:hover{background:#333}
+.btn-wa{background:#25d366;color:#fff;border-color:#25d366}
+.order-item{border:1px solid #e5e5e5;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.order-item:hover{border-color:#aaa}
+.order-item.sel{border-color:#0070f3;background:#f0f7ff}
+.order-row{display:flex;justify-content:space-between;align-items:flex-start}
+.order-name{font-size:14px;font-weight:500}
+.order-total{font-size:13px;font-weight:500;color:#1a7f37}
+.order-meta{font-size:12px;color:#666;margin-top:3px}
+.badge{font-size:11px;padding:2px 7px;border-radius:99px;background:#fff3cd;color:#856404;font-weight:500}
+.tones{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tone{padding:4px 12px;font-size:12px;border-radius:99px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#666}
+.tone.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.msg-area{background:#f5f5f5;border:1px solid #e5e5e5;border-radius:8px;padding:12px;font-size:13px;line-height:1.7;min-height:120px;white-space:pre-wrap;word-break:break-word;outline:none;margin-bottom:10px}
+.action-row{display:flex;gap:8px}
+.action-row .btn{flex:1}
+select{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:12px;background:#fff}
+.empty{text-align:center;padding:2rem;color:#888;font-size:13px}
+.spinner{width:13px;height:13px;border:2px solid #ddd;border-top-color:#666;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.st{font-size:12px;margin-top:6px}
+.ok{color:#1a7f37}.err{color:#c5221f}
+.help{font-size:12px;color:#888;margin-top:8px;line-height:1.6;background:#f9f9f9;padding:10px;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">Recuperador WhatsApp</div>
+  <div id="status-pill" class="pill ko"><span class="dot"></span>No conectado</div>
+</div>
+<div class="wrap">
+  <div class="card" id="cfg-card">
+    <div class="card-title">Conectar Shopify</div>
+    <div class="field"><label>Dominio</label><input type="text" id="shop" value="keysa-store.myshopify.com"/></div>
+    <div class="field"><label>Token (Secreto del Dev Dashboard)</label><input type="password" id="token" placeholder="shpss_xxxxxxxx"/></div>
+    <button class="btn btn-primary" onclick="connect()">Conectar</button>
+    <div id="cfg-st" class="st"></div>
+    <div class="help">Dev Dashboard -> Configuracion -> Secreto -> clic en el ojo para verlo y copiarlo</div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title" style="margin:0">Pedidos en borrador</div>
+        <button class="btn" style="width:auto;padding:5px 12px;font-size:12px" onclick="loadOrders()">Actualizar</button>
+      </div>
+      <select id="status-sel" onchange="loadOrders()">
+        <option value="open">Abiertos</option>
+        <option value="invoice_sent">Factura enviada</option>
+        <option value="completed">Completados</option>
+      </select>
+      <div id="orders-list"><div class="empty">Conecta tu tienda para ver los pedidos</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Mensaje WhatsApp</div>
+      <div class="tones">
+        <div class="tone active" onclick="setTone('urgente',this)">Urgente</div>
+        <div class="tone" onclick="setTone('amigable',this)">Amigable</div>
+        <div class="tone" onclick="setTone('formal',this)">Formal</div>
+        <div class="tone" onclick="setTone('corto',this)">Corto</div>
+      </div>
+      <button class="btn btn-primary" onclick="generateMsg()">
+        <span id="gen-spin" class="spinner" style="display:none"></span>
+        Generar mensaje con IA
+      </button>
+      <div id="gen-st" class="st"></div>
+      <div id="msg-section" style="display:none;margin-top:14px">
+        <div class="msg-area" id="msg-out" contenteditable="true"></div>
+        <div class="action-row">
+          <button class="btn" onclick="copyMsg()">Copiar</button>
+          <button class="btn btn-wa" onclick="openWA()">WhatsApp</button>
+        </div>
+        <div id="copy-st" class="st"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let sel=null,tone='urgente',shopToken='',shopDomain='';
+function setTone(t,el){tone=t;document.querySelectorAll('.tone').forEach(x=>x.classList.remove('active'));el.classList.add('active')}
+async function connect(){
+  const shop=document.getElementById('shop').value.trim().replace(/https?:\/\//,'').replace(/\/$/,'');
+  const token=document.getElementById('token').value.trim();
+  const st=document.getElementById('cfg-st');
+  if(!shop||!token){st.innerHTML='<span class="err">Ingresa dominio y token</span>';return}
+  st.innerHTML='<span class="spinner"></span> Verificando...';
+  try{
+    const r=await fetch('/api/verify',{headers:{'x-shopify-token':token,'x-shopify-shop':shop}});
+    const d=await r.json();
+    if(d.ok){
+      shopToken=token;shopDomain=shop;
+      document.getElementById('cfg-card').style.display='none';
+      const pill=document.getElementById('status-pill');
+      pill.className='pill ok';
+      pill.innerHTML='<span class="dot"></span>'+d.name;
+      loadOrders();
+    }else{st.innerHTML='<span class="err">Token invalido</span>'}
+  }catch(e){st.innerHTML='<span class="err">Error de conexion</span>'}
+}
+async function loadOrders(){
+  if(!shopToken)return;
+  const list=document.getElementById('orders-list');
+  const status=document.getElementById('status-sel').value;
+  list.innerHTML='<div class="empty"><span class="spinner"></span> Cargando...</div>';
+  try{
+    const r=await fetch('/api/draft_orders?status='+status,{headers:{'x-shopify-token':shopToken,'x-shopify-shop':shopDomain}});
+    const d=await r.json();
+    const orders=(d.draft_orders||[]).map(o=>({
+      id:o.id,name:o.name,
+      customer:((o.customer?.first_name||o.billing_address?.first_name||'')+ ' '+(o.customer?.last_name||o.billing_address?.last_name||'')).trim()||'Sin nombre',
+      phone:o.customer?.phone||o.billing_address?.phone||o.shipping_address?.phone||'',
+      product:o.line_items?.[0]?.title||'Producto',
+      qty:o.line_items?.[0]?.quantity||1,
+      total:'$'+Number(o.total_price).toLocaleString('es-CL'),
+      city:o.shipping_address?.city||''
+    }));
+    if(!orders.length){list.innerHTML='<div class="empty">No hay pedidos</div>';return}
+    list.innerHTML='';
+    orders.forEach(o=>{
+      const div=document.createElement('div');
+      div.className='order-item'+(sel?.id===o.id?' sel':'');
+      div.innerHTML=`<div class="order-row"><span class="order-name">${o.customer}</span><span class="order-total">${o.total}</span></div>
+        <div class="order-meta">${o.product}${o.qty>1?' x'+o.qty:''}</div>
+        <div class="order-row" style="margin-top:4px"><span style="font-size:12px;color:#0070f3">${o.phone||'Sin telefono'}</span><span class="badge">${o.name}</span></div>`;
+      div.onclick=()=>{sel=o;loadOrders()};
+      list.appendChild(div);
+    });
+  }catch(e){list.innerHTML='<div class="empty">Error cargando</div>'}
+}
+async function generateMsg(){
+  if(!sel){document.getElementById('gen-st').innerHTML='<span class="err">Selecciona un pedido</span>';return}
+  document.getElementById('gen-spin').style.display='inline-block';
+  document.getElementById('gen-st').textContent='Generando...';
+  document.getElementById('msg-section').style.display='none';
+  const toneMap={urgente:'urgente con stock limitado',amigable:'amigable y cercano',formal:'formal y profesional',corto:'muy corto maximo 3 lineas'};
+  const prompt=`Eres experto en recuperacion de carritos para e-commerce chileno. Genera un mensaje WhatsApp ${toneMap[tone]} en espanol chileno con emojis.\nCliente: ${sel.customer}, Producto: ${sel.product}${sel.qty>1?' x'+sel.qty:''}, Total: ${sel.total}, Ciudad: ${sel.city||'Chile'}, Envio: GRATIS, Pago: contra reembolso.\nSolo el mensaje, nada mas.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})});
+    const data=await r.json();
+    document.getElementById('msg-out').textContent=data.content?.[0]?.text||'';
+    document.getElementById('msg-section').style.display='block';
+    document.getElementById('gen-st').textContent='';
+  }catch(e){document.getElementById('gen-st').innerHTML='<span class="err">Error</span>'}
+  document.getElementById('gen-spin').style.display='none';
+}
+function copyMsg(){
+  navigator.clipboard.writeText(document.getElementById('msg-out').textContent).then(()=>{
+    document.getElementById('copy-st').innerHTML='<span class="ok">Copiado</span>';
+    setTimeout(()=>document.getElementById('copy-st').textContent='',2000);
+  });
+}
+function openWA(){
+  const phone=(sel?.phone||'').replace(/\D/g,'');
+  if(!phone){alert('Sin telefono');return}
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(document.getElementById('msg-out').textContent),'_blank');
+}
+</script>
+</body>
+</html>
 
