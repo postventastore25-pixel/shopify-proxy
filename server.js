@@ -1,79 +1,41 @@
 const express = require('express');
 const axios = require('axios');
-const crypto = require('crypto');
-const path = require('path');
 
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-const {
-  SHOPIFY_API_KEY,
-  SHOPIFY_API_SECRET,
-  SHOPIFY_SHOP,
-  PORT = 3000
-} = process.env;
+const PORT = process.env.PORT || 3000;
 
-let accessToken = process.env.SHOPIFY_ACCESS_TOKEN || null;
-
-// ── OAuth: paso 1 — redirige a Shopify
-app.get('/auth', (req, res) => {
-  const scopes = 'read_orders,read_draft_orders,read_customers,write_draft_orders';
-  const redirectUri = `https://shopify-proxy-production-d142.up.railway.app/auth/callback`;
-  const state = crypto.randomBytes(8).toString('hex');
-  const url = `https://${SHOPIFY_SHOP}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
-  res.redirect(url);
-});
-
-// ── OAuth: paso 2 — recibe el code y obtiene el token
-app.get('/auth/callback', async (req, res) => {
-  const { code } = req.query;
-  try {
-    const response = await axios.post(`https://${SHOPIFY_SHOP}/admin/oauth/access_token`, {
-      client_id: SHOPIFY_API_KEY,
-      client_secret: SHOPIFY_API_SECRET,
-      code
-    });
-    accessToken = response.data.access_token;
-    console.log('Token obtenido:', accessToken);
-    res.redirect('/?connected=1');
-  } catch (e) {
-    res.status(500).send('Error obteniendo token: ' + e.message);
-  }
-});
-
-// ── Proxy: draft orders
 app.get('/api/draft_orders', async (req, res) => {
-  if (!accessToken) return res.status(401).json({ error: 'No autenticado. Ve a /auth' });
+  const token = req.headers['x-shopify-token'];
+  const shop = req.headers['x-shopify-shop'];
+  if (!token || !shop) return res.status(401).json({ error: 'Falta token o tienda' });
   try {
     const status = req.query.status || 'open';
     const r = await axios.get(
-      `https://${SHOPIFY_SHOP}/admin/api/2024-01/draft_orders.json?status=${status}&limit=50`,
-      { headers: { 'X-Shopify-Access-Token': accessToken } }
+      `https://${shop}/admin/api/2024-01/draft_orders.json?status=${status}&limit=50`,
+      { headers: { 'X-Shopify-Access-Token': token } }
     );
     res.json(r.data);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message, details: e.response?.data });
   }
 });
 
-// ── Proxy: orders pendientes
-app.get('/api/orders', async (req, res) => {
-  if (!accessToken) return res.status(401).json({ error: 'No autenticado. Ve a /auth' });
+app.get('/api/verify', async (req, res) => {
+  const token = req.headers['x-shopify-token'];
+  const shop = req.headers['x-shopify-shop'];
+  if (!token || !shop) return res.status(401).json({ error: 'Falta token o tienda' });
   try {
     const r = await axios.get(
-      `https://${SHOPIFY_SHOP}/admin/api/2024-01/orders.json?financial_status=pending&status=open&limit=50`,
-      { headers: { 'X-Shopify-Access-Token': accessToken } }
+      `https://${shop}/admin/api/2024-01/shop.json`,
+      { headers: { 'X-Shopify-Access-Token': token } }
     );
-    res.json(r.data);
+    res.json({ ok: true, name: r.data.shop.name });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(401).json({ ok: false, error: 'Token inválido' });
   }
-});
-
-// ── Estado de conexión
-app.get('/api/status', (req, res) => {
-  res.json({ connected: !!accessToken, shop: SHOPIFY_SHOP });
 });
 
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
