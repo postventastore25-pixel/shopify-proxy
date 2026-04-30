@@ -18,7 +18,7 @@ let accessToken = process.env.SHOPIFY_ACCESS_TOKEN || null;
 
 // ── OAuth: paso 1 — redirige a Shopify
 app.get('/auth', (req, res) => {
-  const scopes = 'read_orders,read_draft_orders,read_customers';
+  const scopes = 'read_orders,read_draft_orders,read_customers,write_draft_orders';
   const redirectUri = `${req.protocol}://${req.get('host')}/auth/callback`;
   const state = crypto.randomBytes(8).toString('hex');
   const url = `https://${SHOPIFY_SHOP}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
