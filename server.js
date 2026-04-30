@@ -23,6 +23,21 @@ app.get('/api/draft_orders', async (req, res) => {
   }
 });
 
+app.get('/api/orders', async (req, res) => {
+  const token = req.headers['x-shopify-token'];
+  const shop = req.headers['x-shopify-shop'];
+  if (!token || !shop) return res.status(401).json({ error: 'Falta token o tienda' });
+  try {
+    const r = await axios.get(
+      `https://${shop}/admin/api/2024-01/orders.json?financial_status=pending&status=open&limit=50`,
+      { headers: { 'X-Shopify-Access-Token': token } }
+    );
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message, details: e.response?.data });
+  }
+});
+
 app.get('/api/verify', async (req, res) => {
   const token = req.headers['x-shopify-token'];
   const shop = req.headers['x-shopify-shop'];
