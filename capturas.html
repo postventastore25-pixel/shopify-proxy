@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Recuperador WhatsApp — Capturas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.top{background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:15px;font-weight:600}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:18px;margin-bottom:16px}
+.card-title{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.drop-zone{border:2px dashed #ddd;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:#fafafa}
+.drop-zone:hover,.drop-zone.over{border-color:#aaa;background:#f0f0f0}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:32px;margin-bottom:8px}
+.drop-text{font-size:13px;color:#888}
+.drop-text b{color:#1a1a1a}
+.preview-img{width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid #e5e5e5;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:#666}
+input[type=text]{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #ddd;background:#fff;color:#1a1a1a;transition:all .15s;width:100%}
+.btn:hover{background:#f5f5f5}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-primary:hover{background:#333}
+.btn-wa{background:#25d366;color:#fff;border-color:#25d366}
+.tones{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tone{padding:4px 12px;font-size:12px;border-radius:99px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#666}
+.tone.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.msg-area{background:#f5f5f5;border:1px solid #e5e5e5;border-radius:8px;padding:12px;font-size:13px;line-height:1.7;min-height:120px;white-space:pre-wrap;word-break:break-word;outline:none;margin-bottom:10px}
+.action-row{display:flex;gap:8px}
+.action-row .btn{flex:1}
+.spinner{width:13px;height:13px;border:2px solid #ddd;border-top-color:#666;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.st{font-size:12px;margin-top:6px}
+.ok{color:#1a7f37}.err{color:#c5221f}
+.divider{border:none;border-top:1px solid #e5e5e5;margin:14px 0}
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid #e5e5e5;padding-bottom:0}
+.tab{padding:8px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#888;margin-bottom:-1px}
+.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+.history-item{border:1px solid #e5e5e5;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.history-item:hover{border-color:#aaa}
+.badge{font-size:11px;padding:2px 7px;border-radius:99px;font-weight:500}
+.badge-pending{background:#fff3cd;color:#856404}
+.badge-sent{background:#e6f4ea;color:#1e7e34}
+.empty{text-align:center;padding:2rem;color:#888;font-size:13px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">🔄 Recuperador WhatsApp</div>
+  <span style="font-size:12px;color:#888">Keysa Store</span>
+</div>
+<div class="wrap">
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('nuevo',this)">Nuevo mensaje</div>
+    <div class="tab" onclick="showTab('historial',this)">Historial</div>
+  </div>
+
+  <div id="tab-nuevo">
+    <div class="card">
+      <div class="card-title">Captura del pedido</div>
+      <div class="drop-zone" id="drop-zone" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
+        <input type="file" accept="image/*" onchange="onFile(event)"/>
+        <div id="drop-content">
+          <div class="drop-icon">📋</div>
+          <div class="drop-text"><b>Arrastra la captura aquí</b> o haz clic para subir</div>
+          <div class="drop-text" style="margin-top:4px;font-size:11px">También puedes pegar con Ctrl+V</div>
+        </div>
+        <img id="preview" class="preview-img" style="display:none"/>
+      </div>
+      <div id="extract-st" class="st"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Datos del pedido</div>
+      <div class="grid2">
+        <div class="field"><label>Nombre cliente</label><input type="text" id="f-nombre" placeholder="Ej: Ericka González"/></div>
+        <div class="field"><label>Teléfono</label><input type="text" id="f-tel" placeholder="+56 9 XXXX XXXX"/></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Producto</label><input type="text" id="f-prod" placeholder="Ej: Péptidos de Colágeno"/></div>
+        <div class="field"><label>Total</label><input type="text" id="f-total" placeholder="Ej: $30.591"/></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Ciudad</label><input type="text" id="f-ciudad" placeholder="Ej: Santiago"/></div>
+        <div class="field"><label>N° pedido</label><input type="text" id="f-num" placeholder="Ej: #D130"/></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Tono del mensaje</div>
+      <div class="tones">
+        <div class="tone active" onclick="setTone('urgente',this)">🔥 Urgente</div>
+        <div class="tone" onclick="setTone('amigable',this)">😊 Amigable</div>
+        <div class="tone" onclick="setTone('formal',this)">👔 Formal</div>
+        <div class="tone" onclick="setTone('corto',this)">⚡ Muy corto</div>
+      </div>
+      <button class="btn btn-primary" onclick="generate()">
+        <span id="gen-spin" class="spinner" style="display:none"></span>
+        Generar mensaje con IA
+      </button>
+      <div id="gen-st" class="st"></div>
+    </div>
+
+    <div class="card" id="result-card" style="display:none">
+      <div class="card-title">Mensaje generado</div>
+      <div class="msg-area" id="msg-out" contenteditable="true"></div>
+      <div class="action-row">
+        <button class="btn" onclick="copyMsg()">📋 Copiar</button>
+        <button class="btn btn-wa" onclick="openWA()">💬 Abrir WhatsApp</button>
+        <button class="btn" onclick="markSent()">✓ Enviado</button>
+        <button class="btn" onclick="generate()">↻ Regenerar</button>
+      </div>
+      <div id="copy-st" class="st"></div>
+    </div>
+  </div>
+
+  <div id="tab-historial" style="display:none">
+    <div class="card">
+      <div class="card-title">Mensajes generados</div>
+      <div id="history-list"><div class="empty">Aún no hay mensajes generados</div></div>
+    </div>
+  </div>
+
+</div>
+<script>
+let tone='urgente', imgBase64='', history=[];
+try{history=JSON.parse(localStorage.getItem('wamsg')||'[]')}catch(e){}
+
+function showTab(t,el){
+  document.getElementById('tab-nuevo').style.display=t==='nuevo'?'':'none';
+  document.getElementById('tab-historial').style.display=t==='historial'?'':'none';
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  if(t==='historial') renderHistory();
+}
+
+function setTone(t,el){tone=t;document.querySelectorAll('.tone').forEach(x=>x.classList.remove('active'));el.classList.add('active')}
+
+function onDrag(e,over){e.preventDefault();document.getElementById('drop-zone').classList.toggle('over',over)}
+function onDrop(e){e.preventDefault();document.getElementById('drop-zone').classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0])}
+function onFile(e){if(e.target.files[0])loadFile(e.target.files[0])}
+
+document.addEventListener('paste',e=>{
+  const items=e.clipboardData?.items;
+  if(!items)return;
+  for(const item of items){if(item.type.startsWith('image/')){loadFile(item.getAsFile());break}}
+});
+
+function loadFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    imgBase64=e.target.result.split(',')[1];
+    const mediaType=e.target.result.split(';')[0].split(':')[1];
+    const prev=document.getElementById('preview');
+    prev.src=e.target.result; prev.style.display='block';
+    document.getElementById('drop-content').style.display='none';
+    analyzeImage(e.target.result, mediaType);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeImage(dataUrl, mediaType){
+  const st=document.getElementById('extract-st');
+  st.innerHTML='<span class="spinner"></span> Analizando captura...';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mediaType,data:dataUrl.split(',')[1]}},
+          {type:'text',text:'Extrae del pedido Shopify en la imagen: nombre del cliente, telefono, producto principal, total final, ciudad de envio, numero de pedido. Responde SOLO en JSON con keys: nombre, telefono, producto, total, ciudad, numero_pedido. Si no encuentras algun campo pon string vacio.'}
+        ]}]})
+    });
+    const data=await r.json();
+    const text=data.content?.[0]?.text||'';
+    const json=JSON.parse(text.replace(/```json|```/g,'').trim());
+    if(json.nombre)document.getElementById('f-nombre').value=json.nombre;
+    if(json.telefono)document.getElementById('f-tel').value=json.telefono;
+    if(json.producto)document.getElementById('f-prod').value=json.producto;
+    if(json.total)document.getElementById('f-total').value=json.total;
+    if(json.ciudad)document.getElementById('f-ciudad').value=json.ciudad;
+    if(json.numero_pedido)document.getElementById('f-num').value=json.numero_pedido;
+    st.innerHTML='<span class="ok">✓ Datos extraídos — revisa y ajusta si es necesario</span>';
+  }catch(e){st.innerHTML='<span style="color:#888">Completa los datos manualmente</span>'}
+}
+
+async function generate(){
+  const nombre=document.getElementById('f-nombre').value.trim();
+  const tel=document.getElementById('f-tel').value.trim();
+  const prod=document.getElementById('f-prod').value.trim();
+  const total=document.getElementById('f-total').value.trim();
+  const ciudad=document.getElementById('f-ciudad').value.trim();
+  const num=document.getElementById('f-num').value.trim();
+  if(!nombre||!prod){document.getElementById('gen-st').innerHTML='<span class="err">Ingresa al menos nombre y producto</span>';return}
+  document.getElementById('gen-spin').style.display='inline-block';
+  document.getElementById('gen-st').textContent='Generando...';
+  document.getElementById('result-card').style.display='none';
+  const toneMap={urgente:'urgente, menciona stock limitado',amigable:'amigable y cercano',formal:'formal y profesional',corto:'muy corto, maximo 3 lineas'};
+  const prompt=`Eres experto en recuperacion de carritos para e-commerce chileno.\nGenera un mensaje WhatsApp ${toneMap[tone]} en espanol chileno con emojis.\nCliente: ${nombre}, Producto: ${prod}, Total: ${total||'con descuento'}, Ciudad: ${ciudad||'Chile'}, Envio: GRATIS, Pago: contra reembolso.${num?' Pedido: '+num:''}\nSolo el mensaje, nada mas.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})});
+    const data=await r.json();
+    const msg=data.content?.[0]?.text||'';
+    document.getElementById('msg-out').textContent=msg;
+    document.getElementById('result-card').style.display='block';
+    document.getElementById('gen-st').textContent='';
+    const entry={id:Date.now(),nombre,tel,prod,total,ciudad,num,msg,sent:false,date:new Date().toLocaleString('es-CL')};
+    history.unshift(entry);
+    if(history.length>50)history.pop();
+    try{localStorage.setItem('wamsg',JSON.stringify(history))}catch(e){}
+  }catch(e){document.getElementById('gen-st').innerHTML='<span class="err">Error generando mensaje</span>'}
+  document.getElementById('gen-spin').style.display='none';
+}
+
+function copyMsg(){
+  navigator.clipboard.writeText(document.getElementById('msg-out').textContent).then(()=>{
+    document.getElementById('copy-st').innerHTML='<span class="ok">✓ Copiado al portapapeles</span>';
+    setTimeout(()=>document.getElementById('copy-st').textContent='',2000);
+  });
+}
+
+function openWA(){
+  const phone=(document.getElementById('f-tel').value||'').replace(/\D/g,'');
+  if(!phone){alert('Ingresa el teléfono del cliente');return}
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(document.getElementById('msg-out').textContent),'_blank');
+}
+
+function markSent(){
+  if(history.length){
+    history[0].sent=true;
+    try{localStorage.setItem('wamsg',JSON.stringify(history))}catch(e){}
+    document.getElementById('copy-st').innerHTML='<span class="ok">✓ Marcado como enviado</span>';
+    setTimeout(()=>document.getElementById('copy-st').textContent='',2000);
+  }
+}
+
+function renderHistory(){
+  const list=document.getElementById('history-list');
+  if(!history.length){list.innerHTML='<div class="empty">Aún no hay mensajes generados</div>';return}
+  list.innerHTML=history.map(h=>`
+    <div class="history-item" onclick="loadHistory(${h.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;font-weight:500">${h.nombre}</span>
+        <span class="badge ${h.sent?'badge-sent':'badge-pending'}">${h.sent?'Enviado':'Pendiente'}</span>
+      </div>
+      <div style="font-size:12px;color:#666;margin-top:3px">${h.prod} · ${h.total}</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px">${h.date} · ${h.tel}</div>
+    </div>`).join('');
+}
+
+function loadHistory(id){
+  const h=history.find(x=>x.id===id);
+  if(!h)return;
+  document.getElementById('f-nombre').value=h.nombre;
+  document.getElementById('f-tel').value=h.tel;
+  document.getElementById('f-prod').value=h.prod;
+  document.getElementById('f-total').value=h.total;
+  document.getElementById('f-ciudad').value=h.ciudad||'';
+  document.getElementById('f-num').value=h.num||'';
+  document.getElementById('msg-out').textContent=h.msg;
+  document.getElementById('result-card').style.display='block';
+  showTab('nuevo',document.querySelectorAll('.tab')[0]);
+}
+</script>
+</body>
+</html>
