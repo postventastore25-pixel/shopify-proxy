@@ -172,7 +172,7 @@ async function analyzeImage(dataUrl, mediaType){
   st.innerHTML='<span class="spinner"></span> Analizando captura...';
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mediaType,data:dataUrl.split(',')[1]}},
@@ -206,7 +206,7 @@ async function generate(){
   const toneMap={urgente:'urgente, menciona stock limitado',amigable:'amigable y cercano',formal:'formal y profesional',corto:'muy corto, maximo 3 lineas'};
   const prompt=`Eres experto en recuperacion de carritos para e-commerce chileno.\nGenera un mensaje WhatsApp ${toneMap[tone]} en espanol chileno con emojis.\nCliente: ${nombre}, Producto: ${prod}, Total: ${total||'con descuento'}, Ciudad: ${ciudad||'Chile'}, Envio: GRATIS, Pago: contra reembolso.${num?' Pedido: '+num:''}\nSolo el mensaje, nada mas.`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})});
     const data=await r.json();
     const msg=data.content?.[0]?.text||'';
