@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({limit: '10mb'}));
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
@@ -50,6 +50,21 @@ app.get('/api/verify', async (req, res) => {
     res.json({ ok: true, name: r.data.shop.name });
   } catch (e) {
     res.status(401).json({ ok: false, error: 'Token inválido' });
+  }
+});
+
+app.post('/api/claude', async (req, res) => {
+  try {
+    const r = await axios.post('https://api.anthropic.com/v1/messages', req.body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': process.env.ANTHROPIC_API_KEY
+      }
+    });
+    res.json(r.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
